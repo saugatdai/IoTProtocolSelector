@@ -3,12 +3,15 @@ import cors from 'cors';
 import Predictor from './Predictor';
 import model from './model';
 import Selector, { Prediction, Weights } from './selector';
+import path from 'path';
 
 const app = express();
 const port = 3000;
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
 
 interface ClientConfig {
     clients: number;

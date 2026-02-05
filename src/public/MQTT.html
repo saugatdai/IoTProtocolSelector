@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>MQTT Subplots: Payload Analysis</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: sans-serif;
+            background-color: #f4f4f4;
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #plotDiv {
+            width: 100%;
+            height: 100vh;
+        }
+
+        nav {
+            width: 40%;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: #007bff;
+            font-size: 16px;
+            margin: 0 10px;
+        }
+
+        nav a:hover {
+            color: #0056b3;
+        }
+
+        nav a:active {
+            color: #0056b3;
+        }
+
+        nav a:visited {
+            color: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="MQTT.html">MQTT</a>
+        <a href="COAP.html">COAP</a>
+        <a href="HTTP.html">HTTP</a>
+    </nav>
+
+    <div class="controls">
+        <h2>MQTT Performance by Payload Size</h2>
+        <p>X-Axis: Message Rate | Y-Axis: Clients | Z-Axis: Dependent Variable</p>
+        <button onclick="toggleMetric()">Switch to RAM Usage</button>
+        <h3 id="metricLabel" style="margin-top: 10px; color: #333;">Displaying: CPU Usage (%)</h3>
+    </div>
+
+    <div id="plotDiv"></div>
+
+    <script>
+        // --- 1. DATA CONSTANTS ---
+        const mqtt_x = [
+            [2, 1, 10], [20, 1, 10], [200, 1, 10], [2000, 1, 10], [10000, 1, 10], [2, 10, 10], [20, 10, 10],
+            [200, 10, 10], [2000, 10, 10], [10000, 10, 10], [2, 100, 10], [20, 100, 10], [200, 100, 10],
+            [2000, 100, 10], [10000, 100, 10], [2, 200, 10], [20, 200, 10], [200, 200, 10], [2000, 200, 10],
+            [10000, 200, 10], [2, 1, 100], [20, 1, 100], [200, 1, 100], [2000, 1, 100], [10000, 1, 100], [2, 10, 100],
+            [20, 10, 100], [200, 10, 100], [2000, 10, 100], [10000, 10, 100], [2, 100, 100], [20, 100, 100],
+            [200, 100, 100], [2000, 100, 100], [10000, 100, 100], [2, 200, 100], [20, 200, 100], [200, 200, 100],
+            [2000, 200, 100], [10000, 200, 100], [2, 1, 1000], [20, 1, 1000], [200, 1, 1000], [2000, 1, 1000],
+            [10000, 1, 1000], [2, 10, 1000], [20, 10, 1000], [200, 10, 1000], [2000, 10, 1000], [10000, 10, 1000],
+            [2, 100, 1000], [20, 100, 1000], [200, 100, 1000], [2000, 100, 1000], [10000, 100, 1000], [2, 200, 1000],
+            [20, 200, 1000], [200, 200, 1000], [2000, 200, 1000], [10000, 200, 1000]
+        ];
+
+        const mqtt_y = [
+            [0.1, 1.2], [0.1, 1.2], [0.1, 1.2], [0.1, 1.24], [0.1, 1.34], [0.4, 1.27], [0.4, 1.24],
+            [0.4, 1.25], [0.4, 1.16], [0.5, 1.15], [1.6, 1.41], [1.6, 1.26], [1.6, 1.35], [1.8, 1.15],
+            [2, 1.26], [2.4, 1.34], [2.4, 1.41], [2.4, 1.29], [2.6, 1.34], [3, 1.31], [1.4, 2.4], [1.3, 1.76],
+            [1.3, 2.08], [1.4, 1.97], [2.2, 1.95], [4.2, 2.7], [4.2, 2.76], [4.3, 2.55], [4.6, 2.65], [5.2, 2.64],
+            [4.2, 2.6], [4.3, 2.65], [4.2, 2.54], [4.2, 2.77], [5, 2.99], [4.2, 2.67], [4.1, 2.41], [4.2, 2.53], [4.5, 2.69],
+            [5, 3.28], [21.2, 64.88], [20.8, 65.58], [22, 64.29], [24, 457.54], [24, 7585.38], [14, 62.73], [22.1, 61.84],
+            [24.8, 72.13], [24.2, 252.14], [23.7, 671.94], [24.8, 62.53], [24, 62.56], [23.9, 76.46], [24.8, 1697.42],
+            [24.2, 6827.67], [24.4, 62.59], [24.9, 63.83], [24.7, 63.04], [24.8, 1144.41], [24.7, 9592.42]
+        ];
+
+        // Axis Categories
+        const payloads = [2, 20, 200, 2000, 10000];
+        const rates = [1, 10, 100, 200];
+        const clients = [10, 100, 1000];
+
+        // --- 2. DATA PROCESSING ---
+        function getZMatrix(targetPayload, metricIndex) {
+            let z = [];
+            for (let c = 0; c < clients.length; c++) {
+                let row = [];
+                for (let r = 0; r < rates.length; r++) {
+                    const matchIndex = mqtt_x.findIndex(item =>
+                        item[0] === targetPayload && item[1] === rates[r] && item[2] === clients[c]
+                    );
+                    row.push(matchIndex !== -1 ? mqtt_y[matchIndex][metricIndex] : 0);
+                }
+                z.push(row);
+            }
+            return z;
+        }
+
+        // --- 3. PLOTTING LOGIC ---
+        let currentMetric = 0;
+
+        function drawPlot() {
+            const metricName = currentMetric === 0 ? "CPU Usage (%)" : "RAM Usage (MB)";
+            const traces = [];
+
+            payloads.forEach((pl, index) => {
+                traces.push({
+                    type: 'surface',
+                    x: rates, y: clients, z: getZMatrix(pl, currentMetric),
+                    scene: `scene${index + 1}`,
+                    name: `${pl} Bytes`,
+                    colorscale: 'Viridis',
+                    showscale: false, opacity: 0.9
+                });
+            });
+
+            // REVISED LAYOUT: 'showarrow' removed to allow default arrow behavior
+            const layout = {
+                title: `MQTT Analysis: ${metricName}`,
+                height: 900,
+                margin: { l: 20, r: 20, b: 20, t: 80 },
+
+                scene1: {
+                    domain: { x: [0, 0.33], y: [0.55, 1] },
+                    annotations: [{ text: "Payload: 2 Bytes" }], // Default is showarrow: true
+                    xaxis: { title: 'Rate' }, yaxis: { title: 'Clients' }, zaxis: { title: metricName }
+                },
+                scene2: {
+                    domain: { x: [0.33, 0.66], y: [0.55, 1] },
+                    annotations: [{ text: "Payload: 20 Bytes" }],
+                    xaxis: { title: 'Rate' }, yaxis: { title: 'Clients' }, zaxis: { title: metricName }
+                },
+                scene3: {
+                    domain: { x: [0.66, 1], y: [0.55, 1] },
+                    annotations: [{ text: "Payload: 200 Bytes" }],
+                    xaxis: { title: 'Rate' }, yaxis: { title: 'Clients' }, zaxis: { title: metricName }
+                },
+                scene4: {
+                    domain: { x: [0, 0.33], y: [0, 0.45] },
+                    annotations: [{ text: "Payload: 2000 Bytes" }],
+                    xaxis: { title: 'Rate' }, yaxis: { title: 'Clients' }, zaxis: { title: metricName }
+                },
+                scene5: {
+                    domain: { x: [0.33, 0.66], y: [0, 0.45] },
+                    annotations: [{ text: "Payload: 10000 Bytes" }],
+                    xaxis: { title: 'Rate' }, yaxis: { title: 'Clients' }, zaxis: { title: metricName }
+                }
+            };
+
+            Plotly.newPlot('plotDiv', traces, layout);
+            document.getElementById('metricLabel').innerText = `Displaying: ${metricName}`;
+            document.querySelector('button').innerText = currentMetric === 0 ? "Switch to RAM Usage" : "Switch to CPU Usage";
+        }
+
+        function toggleMetric() { currentMetric = currentMetric === 0 ? 1 : 0; drawPlot(); }
+        drawPlot();
+    </script>
+
+</body>
+
+</html>

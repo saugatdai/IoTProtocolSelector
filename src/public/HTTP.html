@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>HTTP Subplots: Payload Analysis</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: sans-serif;
+            background-color: #f4f4f4;
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #c82333;
+        }
+
+        #plotDiv {
+            width: 100%;
+            height: 100vh;
+        }
+
+        nav {
+            width: 40%;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: #007bff;
+            font-size: 16px;
+            margin: 0 10px;
+        }
+
+        nav a:hover {
+            color: #0056b3;
+        }
+
+        nav a:active {
+            color: #0056b3;
+        }
+
+        nav a:visited {
+            color: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="MQTT.html">MQTT</a>
+        <a href="COAP.html">COAP</a>
+        <a href="HTTP.html">HTTP</a>
+    </nav>
+
+    <div class="controls">
+        <h2>HTTP Performance by Payload Size</h2>
+        <p>X-Axis: Rate | Y-Axis: Clients | Z-Axis: Performance Metric</p>
+        <button onclick="toggleMetric()">Switch to RAM Usage</button>
+        <h3 id="metricLabel" style="margin-top: 10px; color: #333;">Displaying: CPU Usage (%)</h3>
+    </div>
+
+    <div id="plotDiv"></div>
+
+    <script>
+        // --- DATA: HTTP ---
+        // Payloads: 2, 64, 512, 1024
+        const http_x = [
+            [2, 1, 10], [64, 1, 10], [512, 1, 10], [1024, 1, 10], [2, 10, 10], [64, 10, 10], [512, 10, 10],
+            [1024, 10, 10], [2, 100, 10], [64, 100, 10], [512, 100, 10], [1024, 100, 10], [2, 200, 10],
+            [64, 200, 10], [512, 200, 10], [1024, 200, 10], [2, 1, 100], [64, 1, 100], [512, 1, 100], [1024, 1, 100],
+            [2, 10, 100], [64, 10, 100], [512, 10, 100], [1024, 10, 100], [2, 100, 100], [64, 100, 100],
+            [512, 100, 100], [1024, 100, 100], [2, 200, 100], [64, 200, 100], [512, 200, 100], [1024, 200, 100],
+            [2, 1, 1000], [64, 1, 1000], [512, 1, 1000], [1024, 1, 1000], [2, 10, 1000], [64, 10, 1000],
+            [512, 10, 1000], [1024, 10, 1000], [2, 100, 1000], [64, 100, 1000], [512, 100, 1000], [1024, 100, 1000],
+            [2, 200, 1000], [64, 200, 1000], [512, 200, 1000], [1024, 200, 1000]
+        ];
+
+        const http_y = [
+            [0.3, 2.6], [0.3, 3.4], [0.3, 4], [0.3, 3.7], [3.9, 26.5], [3.8, 26.9], [3.9, 26], [3.8, 26.6],
+            [14.8, 43.9], [14.6, 43.4], [14.5, 42.7], [14.6, 43.6], [17.8, 45], [17.9, 42.7], [18.6, 42.9],
+            [17.3, 44], [2.3, 25.8], [2.3, 24.6], [2.4, 23.7], [2.5, 24.5], [14.7, 43.4], [14.7, 43.1],
+            [14.6, 44.4], [14.9, 43.4], [17.2, 59.2], [17.1, 57.9], [17.3, 59.7], [17.5, 62.1], [17.6, 62.7],
+            [17.4, 64.1], [17.5, 60.9], [17.1, 58], [17.5, 68.1], [17.5, 66.9], [17.6, 67.9], [17.4, 70.8],
+            [19.5, 89.1], [19.6, 85.8], [19.6, 90.2], [18.9, 86.9], [18.9, 89.1], [18.6, 94.9], [18.8, 96.7],
+            [18.7, 94.3], [18.9, 95.1], [19, 93.7], [19.2, 92.9], [18.9, 94.9]
+        ];
+
+        // Axis Categories
+        const payloads = [2, 64, 512, 1024]; // Only 4 payloads available for HTTP
+        const rates = [1, 10, 100, 200];
+        const clients = [10, 100, 1000];
+
+        // Helper: Create Z-Matrix
+        function getZMatrix(targetPayload, metricIndex) {
+            let z = [];
+            for (let c = 0; c < clients.length; c++) {
+                let row = [];
+                for (let r = 0; r < rates.length; r++) {
+                    const matchIndex = http_x.findIndex(item =>
+                        item[0] === targetPayload && item[1] === rates[r] && item[2] === clients[c]
+                    );
+                    row.push(matchIndex !== -1 ? http_y[matchIndex][metricIndex] : 0);
+                }
+                z.push(row);
+            }
+            return z;
+        }
+
+        let currentMetric = 0;
+
+        function drawPlot() {
+            const metricName = currentMetric === 0 ? "CPU Usage (%)" : "RAM Usage (MB)";
+            const traces = [];
+
+            payloads.forEach((pl, index) => {
+                traces.push({
+                    type: 'surface',
+                    x: rates, y: clients, z: getZMatrix(pl, currentMetric),
+                    scene: `scene${index + 1}`,
+                    name: `${pl} Bytes`,
+                    colorscale: 'Reds', // Distinct color for HTTP
+                    showscale: false, opacity: 0.9
+                });
+            });
+
+            // 2x2 Grid Layout
+            const layout = {
+                title: `HTTP Analysis: ${metricName}`,
+                height: 900,
+                margin: { l: 20, r: 20, b: 20, t: 80 },
+                // Layout for 4 plots
+                scene1: { domain: { x: [0, 0.5], y: [0.5, 1] }, annotations: [{ text: "Payload: 2 B" }], xaxis: { title: 'Rate' }, yaxis: { title: 'Clients' }, zaxis: { title: metricName } },
+                scene2: { domain: { x: [0.5, 1], y: [0.5, 1] }, annotations: [{ text: "Payload: 64 B" }], xaxis: { title: 'Rate' }, yaxis: { title: 'Clients' }, zaxis: { title: metricName } },
+                scene3: { domain: { x: [0, 0.5], y: [0, 0.5] }, annotations: [{ text: "Payload: 512 B" }], xaxis: { title: 'Rate' }, yaxis: { title: 'Clients' }, zaxis: { title: metricName } },
+                scene4: { domain: { x: [0.5, 1], y: [0, 0.5] }, annotations: [{ text: "Payload: 1024 B" }], xaxis: { title: 'Rate' }, yaxis: { title: 'Clients' }, zaxis: { title: metricName } }
+            };
+
+            Plotly.newPlot('plotDiv', traces, layout);
+            document.getElementById('metricLabel').innerText = `Displaying: ${metricName}`;
+            document.querySelector('button').innerText = currentMetric === 0 ? "Switch to RAM Usage" : "Switch to CPU Usage";
+        }
+
+        function toggleMetric() { currentMetric = currentMetric === 0 ? 1 : 0; drawPlot(); }
+        drawPlot();
+    </script>
+</body>
+
+</html>
