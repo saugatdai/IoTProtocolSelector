@@ -21,7 +21,7 @@ interface ClientConfig {
     ramWeight: number;
 }
 
-app.post('/log-config', (req: Request, res: Response) => {
+app.post('/selector', (req: Request, res: Response) => {
     const { clients, messagesPerSecond, payloadSize, cpuWeight, ramWeight } = req.body as ClientConfig;
 
     const predictor = new Predictor();

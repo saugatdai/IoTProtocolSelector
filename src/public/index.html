@@ -22,12 +22,13 @@
         nav a {
             text-decoration: none;
             color: #007bff;
-            font-size: 16px;
-            margin: 0 10px;
+            font-size: 1.5em;
+            margin: 0 2em;
+            font-weight: bold;
         }
 
         nav a:hover {
-            color: #0056b3;
+            color: #9c9;
         }
 
         nav a:active {
@@ -35,7 +36,58 @@
         }
 
         nav a:visited {
-            color: #0056b3;
+            color: #007bff;
+        }
+
+        img {
+            display: block;
+            margin: 0 auto;
+            height: 600px;
+            border-radius: 20px;
+        }
+
+        h1,
+        h2 {
+            text-align: center;
+            margin-top: 3em;
+            color: #333;
+        }
+
+        form {
+            margin: 0 auto;
+            width: 700px;
+        }
+
+        input {
+            padding: 10px;
+            margin: 5px;
+            width: 400px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 10px;
+            margin: 5px;
+            width: 100%;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            background-color: #007bff;
+            color: #fff;
+            font-size: 1.2em;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        div.result {
+            font-size: 1.4em;
+            line-height: 2em;
+            background: #DFF2FE;
+            padding: 10px;
+            border-radius: 5px;
         }
     </style>
 </head>
@@ -48,6 +100,89 @@
         <a href="COAP.html">COAP</a>
         <a href="HTTP.html">HTTP</a>
     </nav>
+    <div class="container">
+        <div>
+            <h1>Protocol Selector Group Work - AII 2K25/26</h1>
+            <img src="PIC.jpg" alt="">
+        </div>
+        <div>
+            <h2>Protocol Selector Implementation</h2>
+        </div>
+        <form id="selectorForm" autocomplete="off">
+            <table>
+                <tr>
+                    <td><label for="clients">Clients:</label></td>
+                    <td><input type="number" id="clients" name="clients" required></td>
+                </tr>
+                <tr>
+                    <td><label for="messagesPerSecond">Messages Per Second:</label></td>
+                    <td><input type="number" id="messagesPerSecond" name="messagesPerSecond" required></td>
+                </tr>
+                <tr>
+                    <td><label for="payloadSize">Payload Size:</label></td>
+                    <td><input type="number" id="payloadSize" name="payloadSize" required></td>
+                </tr>
+                <tr>
+                    <td><label for="cpuWeight">CPU Weight:</label></td>
+                    <td><input id="cpuWeight" name="cpuWeight" required></td>
+                </tr>
+                <tr>
+                    <td><label for="ramWeight">RAM Weight:</label></td>
+                    <td><input id="ramWeight" name="ramWeight" required></td>
+                </tr>
+                <tr>
+                    <td colspan="2" style="text-align: center;"><button type="submit">Submit</button></td>
+                </tr>
+
+            </table>
+
+            <br>
+            <div id="status"></div>
+            <div id="result"></div>
+            <br>
+        </form>
+
+        <script>
+            document.getElementById('selectorForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const statusDiv = document.getElementById('status');
+                const resultDiv = document.getElementById('result');
+
+                statusDiv.textContent = 'Loading...';
+                resultDiv.innerHTML = '';
+
+                const formData = new FormData(e.target);
+                const data = {};
+                formData.forEach((value, key) => {
+                    data[key] = Number(value);
+                });
+
+                try {
+                    const response = await fetch('/selector', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    statusDiv.textContent = '';
+                    resultDiv.innerHTML = `<div class='result'>
+                    Selected Protocol: ${result.selectedProtocol} <br>
+                    Second Priority: ${result.secondPriority} <br>
+                    Third Priority: ${result.thirdPriority} <br>
+                        </div>`;
+                } catch (error) {
+                    statusDiv.textContent = 'Error: ' + error.message;
+                }
+            });
+        </script>
+    </div>
 </body>
 
 </html>

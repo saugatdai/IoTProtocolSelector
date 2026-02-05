@@ -41,7 +41,7 @@ export default class Selector {
         const results = weightedSum(data, sortOptions);
 
         return {
-            selectedProdocol: results[0].id,
+            selectedProtocol: results[0].id,
             secondPriority: results[1].id,
             thirdPriority: results[2].id
         }
